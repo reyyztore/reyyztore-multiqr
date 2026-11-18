@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { CINEMATIC_FRAMES, renderFramedPhoto } from '@/lib/frames';
 import {
   Camera, Image as ImageIcon, Star, Send, Share2, Coins, X,
   RefreshCw, Phone, Sparkles, CheckCircle2, Heart
@@ -16,12 +17,12 @@ export default function CustomerPublicPage() {
   const [globalSettings, setGlobalSettings] = useState<any>(null);
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [showSupportModal, setShowSupportModal] = useState(false);
 
   const [cameraOpen, setCameraOpen] = useState(false);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [rawImageSrc, setRawImageSrc] = useState<string>('');
+  const [selectedFrame, setSelectedFrame] = useState<string>('tender-default');
   const [framedDataUrl, setFramedDataUrl] = useState<string>('');
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -69,6 +70,11 @@ export default function CustomerPublicPage() {
         { event: 'UPDATE', schema: 'public', table: 'tenders', filter: `id=eq.${tData.id}` },
         (payload) => setTender(payload.new)
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'global_settings' },
+        (payload) => { if (payload.new) setGlobalSettings(payload.new); }
+      )
       .subscribe();
 
     return () => {
@@ -88,9 +94,7 @@ export default function CustomerPublicPage() {
 
   const startCamera = async (mode: 'user' | 'environment' = facingMode) => {
     try {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-      }
+      if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: mode, width: { ideal: 1080 }, height: { ideal: 1080 } },
         audio: false,
@@ -107,7 +111,7 @@ export default function CustomerPublicPage() {
 
   const stopCamera = () => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     }
     setCameraOpen(false);
@@ -155,74 +159,13 @@ export default function CustomerPublicPage() {
       setFramedDataUrl('');
       return;
     }
-
-    const activeFrame = tender.theme_config?.active_frame_url || '';
-    const canvas = document.createElement('canvas');
-    canvas.width = 900;
-    canvas.height = 900;
-    const ctx = canvas.getContext('2d')!;
-
-    const baseImg = new Image();
-    baseImg.crossOrigin = 'anonymous';
-    baseImg.onload = () => {
-      const minSide = Math.min(baseImg.width, baseImg.height);
-      const sx = (baseImg.width - minSide) / 2;
-      const sy = (baseImg.height - minSide) / 2;
-
-      if (activeFrame === 'preset:polaroid') {
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, 900, 900);
-        ctx.drawImage(baseImg, sx, sy, minSide, minSide, 55, 55, 790, 690);
-        ctx.fillStyle = '#0f172a';
-        ctx.font = 'bold 30px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(tender.business_name, 450, 825);
-        setFramedDataUrl(canvas.toDataURL('image/webp', 0.85));
-      } else if (activeFrame === 'preset:gold') {
-        ctx.drawImage(baseImg, sx, sy, minSide, minSide, 0, 0, 900, 900);
-        const grad = ctx.createLinearGradient(0, 0, 900, 900);
-        grad.addColorStop(0, '#f59e0b');
-        grad.addColorStop(0.5, '#fef08a');
-        grad.addColorStop(1, '#d97706');
-        ctx.strokeStyle = grad;
-        ctx.lineWidth = 36;
-        ctx.strokeRect(18, 18, 864, 864);
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.82)';
-        ctx.fillRect(0, 810, 900, 90);
-        ctx.fillStyle = '#fde047';
-        ctx.font = 'bold 28px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(`★ ${tender.business_name} ★`, 450, 865);
-        setFramedDataUrl(canvas.toDataURL('image/webp', 0.85));
-      } else if (activeFrame === 'preset:neon') {
-        ctx.drawImage(baseImg, sx, sy, minSide, minSide, 0, 0, 900, 900);
-        const grad = ctx.createLinearGradient(0, 0, 900, 900);
-        grad.addColorStop(0, '#ec4899');
-        grad.addColorStop(0.5, '#8b5cf6');
-        grad.addColorStop(1, '#06b6d4');
-        ctx.strokeStyle = grad;
-        ctx.lineWidth = 32;
-        ctx.strokeRect(16, 16, 868, 868);
-        setFramedDataUrl(canvas.toDataURL('image/webp', 0.85));
-      } else if (activeFrame && !activeFrame.startsWith('preset:')) {
-        ctx.drawImage(baseImg, sx, sy, minSide, minSide, 0, 0, 900, 900);
-        const frameOverlay = new Image();
-        frameOverlay.crossOrigin = 'anonymous';
-        frameOverlay.onload = () => {
-          ctx.drawImage(frameOverlay, 0, 0, 900, 900);
-          setFramedDataUrl(canvas.toDataURL('image/webp', 0.85));
-        };
-        frameOverlay.onerror = () => {
-          setFramedDataUrl(canvas.toDataURL('image/webp', 0.85));
-        };
-        frameOverlay.src = activeFrame;
-      } else {
-        ctx.drawImage(baseImg, sx, sy, minSide, minSide, 0, 0, 900, 900);
-        setFramedDataUrl(canvas.toDataURL('image/webp', 0.85));
-      }
-    };
-    baseImg.src = rawImageSrc;
-  }, [rawImageSrc, tender]);
+    renderFramedPhoto(
+      rawImageSrc,
+      selectedFrame,
+      tender.theme_config?.active_frame_url || '',
+      tender.business_name
+    ).then((res) => setFramedDataUrl(res));
+  }, [rawImageSrc, selectedFrame, tender]);
 
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -236,17 +179,22 @@ export default function CustomerPublicPage() {
     let uploadedUrl = '';
 
     try {
-      if (framedDataUrl) {
-        const res = await fetch(framedDataUrl);
+      const imageToUpload = framedDataUrl || rawImageSrc;
+      if (imageToUpload) {
+        const res = await fetch(imageToUpload);
         const blob = await res.blob();
         const fileName = `${tender.slug}/${Date.now()}-${Math.random().toString(36).substring(2, 7)}.webp`;
         const { error: upErr } = await supabase.storage.from('uploads').upload(fileName, blob, {
-          contentType: 'image/webp',
+          contentType: blob.type || 'image/webp',
+          upsert: true,
         });
-        if (!upErr) {
-          const { data: pub } = supabase.storage.from('uploads').getPublicUrl(fileName);
-          uploadedUrl = pub.publicUrl;
+        if (upErr) {
+          alert('Gagal mengunggah foto: ' + upErr.message);
+          setSubmitting(false);
+          return;
         }
+        const { data: pub } = supabase.storage.from('uploads').getPublicUrl(fileName);
+        uploadedUrl = pub.publicUrl;
       }
 
       const { error } = await supabase.from('reviews').insert({
@@ -264,6 +212,7 @@ export default function CustomerPublicPage() {
         setFramedDataUrl('');
         setComment('');
         setRating(5);
+        await fetchVisibleReviews(tender.id);
       } else {
         alert('Gagal mengirim ulasan: ' + error.message);
       }
@@ -328,7 +277,6 @@ export default function CustomerPublicPage() {
       style={{ backgroundColor: theme.bg_color || '#060913' }}
       className="min-h-screen text-white relative overflow-hidden pb-24 transition-colors duration-500"
     >
-      {/* Dynamic Ambient Mesh Background */}
       <div
         style={{ backgroundColor: accentColor }}
         className="fixed -top-32 left-1/2 -translate-x-1/2 w-[500px] h-[340px] rounded-full opacity-25 blur-[130px] pointer-events-none"
@@ -399,7 +347,6 @@ export default function CustomerPublicPage() {
 
       {/* KONTEN UTAMA */}
       <div className="max-w-md mx-auto px-4 pt-16 space-y-6 relative z-10">
-        {/* Header Brand */}
         <div className="text-center space-y-2.5 animate-fade-up">
           {theme.logo_url && (
             <div className="relative inline-block">
@@ -453,7 +400,7 @@ export default function CustomerPublicPage() {
           </div>
         )}
 
-        {/* BENTO CARD FORM KAMERA & ULASAN */}
+        {/* BENTO CARD FORM KAMERA & 10 BINGKAI */}
         <form
           onSubmit={handleSubmitReview}
           className={`p-5 rounded-[2rem] space-y-4 animate-fade-up ${
@@ -462,7 +409,6 @@ export default function CustomerPublicPage() {
               : 'glass-card-light'
           }`}
         >
-          {/* Studio Kamera & Bingkai */}
           <div>
             {cameraOpen ? (
               <div className="relative rounded-2xl overflow-hidden bg-black aspect-square shadow-inner">
@@ -503,18 +449,44 @@ export default function CustomerPublicPage() {
                 </div>
               </div>
             ) : framedDataUrl ? (
-              <div className="relative rounded-2xl overflow-hidden aspect-square bg-black shadow-xl">
-                <img src={framedDataUrl} alt="Preview Bingkai" className="w-full h-full object-cover" />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRawImageSrc('');
-                    setFramedDataUrl('');
-                  }}
-                  className="absolute top-3 right-3 px-3 py-1.5 rounded-full bg-black/70 backdrop-blur-md border border-white/15 text-white text-xs font-semibold flex items-center gap-1"
-                >
-                  <X className="w-3.5 h-3.5" /> Ulangi
-                </button>
+              <div className="space-y-3">
+                <div className="relative rounded-2xl overflow-hidden aspect-square bg-black shadow-xl">
+                  <img src={framedDataUrl} alt="Preview Bingkai" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRawImageSrc('');
+                      setFramedDataUrl('');
+                    }}
+                    className="absolute top-3 right-3 px-3 py-1.5 rounded-full bg-black/70 backdrop-blur-md border border-white/15 text-white text-xs font-semibold flex items-center gap-1"
+                  >
+                    <X className="w-3.5 h-3.5" /> Ulangi
+                  </button>
+                </div>
+
+                {/* 10 PILIHAN BINGKAI INTERAKTIF & SINEMATIS */}
+                <div>
+                  <p className="text-[11px] font-bold text-amber-300 uppercase tracking-wider mb-2">
+                    Pilih Bingkai Sinematis (10 Gaya):
+                  </p>
+                  <div className="flex gap-2 overflow-x-auto pb-1.5">
+                    {CINEMATIC_FRAMES.map((f) => (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => setSelectedFrame(f.id)}
+                        className={`shrink-0 px-3.5 py-2 rounded-2xl text-xs font-bold border transition flex items-center gap-1.5 ${
+                          selectedFrame === f.id
+                            ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-lg scale-105'
+                            : 'bg-black/40 text-slate-300 border-white/10 hover:bg-white/10'
+                        }`}
+                      >
+                        <span>{f.badge}</span>
+                        <span>{f.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-3">
