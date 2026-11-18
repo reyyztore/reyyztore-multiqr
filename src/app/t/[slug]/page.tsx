@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import {
   Camera, Image as ImageIcon, Star, Send, Share2, Coins, X,
-  RefreshCw, Phone, Sparkles, CheckCircle2
+  RefreshCw, Phone, Sparkles, CheckCircle2, Heart
 } from 'lucide-react';
 
 export default function CustomerPublicPage() {
@@ -17,10 +17,8 @@ export default function CustomerPublicPage() {
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Modal QRIS Support Pojok Kiri Atas
   const [showSupportModal, setShowSupportModal] = useState(false);
 
-  // Kamera & Foto
   const [cameraOpen, setCameraOpen] = useState(false);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [rawImageSrc, setRawImageSrc] = useState<string>('');
@@ -28,7 +26,6 @@ export default function CustomerPublicPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  // Form Pelanggan (Cuma No WA + Bintang + Ulasan)
   const [whatsapp, setWhatsapp] = useState('');
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
@@ -60,7 +57,6 @@ export default function CustomerPublicPage() {
     await fetchVisibleReviews(tData.id);
     setLoading(false);
 
-    // Realtime Subscription untuk Ulasan Baru & Perubahan Tema Tender
     const channel = supabase
       .channel(`public-tender-${tData.id}`)
       .on(
@@ -90,7 +86,6 @@ export default function CustomerPublicPage() {
     if (data) setReviews(data);
   };
 
-  // Buka Kamera Browser
   const startCamera = async (mode: 'user' | 'environment' = facingMode) => {
     try {
       if (streamRef.current) {
@@ -103,12 +98,10 @@ export default function CustomerPublicPage() {
       streamRef.current = stream;
       setCameraOpen(true);
       setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
+        if (videoRef.current) videoRef.current.srcObject = stream;
       }, 100);
     } catch {
-      alert('Izin kamera ditolak atau perangkat tidak mendukung kamera langsung. Silakan pilih dari galeri.');
+      alert('Izin kamera tidak tersedia. Silakan gunakan tombol Galeri.');
     }
   };
 
@@ -152,14 +145,11 @@ export default function CustomerPublicPage() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setRawImageSrc(reader.result);
-      }
+      if (typeof reader.result === 'string') setRawImageSrc(reader.result);
     };
     reader.readAsDataURL(file);
   };
 
-  // Gabungkan Foto dengan Bingkai Modern Tender X
   useEffect(() => {
     if (!rawImageSrc || !tender) {
       setFramedDataUrl('');
@@ -175,7 +165,6 @@ export default function CustomerPublicPage() {
     const baseImg = new Image();
     baseImg.crossOrigin = 'anonymous';
     baseImg.onload = () => {
-      // Crop center square
       const minSide = Math.min(baseImg.width, baseImg.height);
       const sx = (baseImg.width - minSide) / 2;
       const sy = (baseImg.height - minSide) / 2;
@@ -198,7 +187,7 @@ export default function CustomerPublicPage() {
         ctx.strokeStyle = grad;
         ctx.lineWidth = 36;
         ctx.strokeRect(18, 18, 864, 864);
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.82)';
         ctx.fillRect(0, 810, 900, 90);
         ctx.fillStyle = '#fde047';
         ctx.font = 'bold 28px sans-serif';
@@ -283,7 +272,6 @@ export default function CustomerPublicPage() {
     }
   };
 
-  // Share ke WA / IG / Story
   const handleSocialShare = async (photoUrl?: string, textComment?: string) => {
     const shareText = `Momen seru di ${tender?.business_name}! "${textComment || 'Pelayanan mantap!'}" — Cek di ${window.location.href}`;
 
@@ -293,29 +281,17 @@ export default function CustomerPublicPage() {
         const blob = await response.blob();
         const file = new File([blob], `${tender.slug}-moment.webp`, { type: 'image/webp' });
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            title: tender.business_name,
-            text: shareText,
-            files: [file],
-          });
+          await navigator.share({ title: tender.business_name, text: shareText, files: [file] });
           return;
         }
-      } catch {
-        // fallback ke text share
-      }
+      } catch {}
     }
 
     if (navigator.share) {
       try {
-        await navigator.share({
-          title: tender.business_name,
-          text: shareText,
-          url: window.location.href,
-        });
+        await navigator.share({ title: tender.business_name, text: shareText, url: window.location.href });
         return;
-      } catch {
-        // ignore cancel
-      }
+      } catch {}
     }
 
     window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
@@ -323,60 +299,78 @@ export default function CustomerPublicPage() {
 
   const maskPhone = (phone: string) => {
     if (phone.length < 7) return phone;
-    return `${phone.slice(0, 4)}-****-${phone.slice(-3)}`;
+    return `${phone.slice(0, 4)} •••• ${phone.slice(-3)}`;
   };
 
   if (loading) {
-    return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">Memuat...</div>;
+    return (
+      <div className="min-h-screen bg-[#050811] flex flex-col items-center justify-center gap-3 text-slate-400">
+        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs tracking-wider uppercase">Memuat Pengalaman...</p>
+      </div>
+    );
   }
 
   if (!tender) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center text-slate-400">
-        <p className="text-lg font-semibold text-white">Halaman Tidak Ditemukan atau Nonaktif</p>
-        <p className="text-xs mt-1">Pastikan QR Code yang Anda scan valid.</p>
+      <div className="min-h-screen bg-[#050811] flex flex-col items-center justify-center p-6 text-center">
+        <p className="text-lg font-bold text-white">Halaman Tidak Ditemukan</p>
+        <p className="text-xs text-slate-400 mt-1">QR Code tidak aktif atau alamat salah.</p>
       </div>
     );
   }
 
   const theme = tender.theme_config || {};
+  const accentColor = theme.primary_color || '#6366f1';
 
   return (
     <div
-      style={{ backgroundColor: theme.bg_color || '#0f172a' }}
-      className="min-h-screen text-white relative pb-20 transition-colors"
+      style={{ backgroundColor: theme.bg_color || '#060913' }}
+      className="min-h-screen text-white relative overflow-hidden pb-24 transition-colors duration-500"
     >
-      {/* POJOK KIRI ATAS: LOGO UANG SUPPORT SISTEM SEIKHLASMU */}
+      {/* Dynamic Ambient Mesh Background */}
+      <div
+        style={{ backgroundColor: accentColor }}
+        className="fixed -top-32 left-1/2 -translate-x-1/2 w-[500px] h-[340px] rounded-full opacity-25 blur-[130px] pointer-events-none"
+      />
+      <div
+        style={{ backgroundColor: accentColor }}
+        className="fixed bottom-10 -right-24 w-72 h-72 rounded-full opacity-15 blur-[110px] pointer-events-none"
+      />
+
+      {/* POJOK KIRI ATAS: FLOATING GOLD SUPPORT PILL */}
       <button
         onClick={() => setShowSupportModal(true)}
         title="Support Sistem Ini Seikhlasmu"
-        className="fixed top-4 left-4 z-40 flex items-center gap-2 px-3 py-2 rounded-full bg-amber-500/95 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-xl shadow-amber-500/20 transition transform hover:scale-105"
+        className="fixed top-4 left-4 z-40 group flex items-center gap-2 pl-2.5 pr-3.5 py-2 rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-slate-950 font-extrabold text-xs shadow-[0_8px_25px_rgba(245,158,11,0.4)] hover:scale-105 active:scale-95 transition-all"
       >
-        <Coins className="w-4 h-4" />
-        <span className="hidden sm:inline">Support</span>
+        <span className="w-6 h-6 rounded-full bg-slate-950/15 flex items-center justify-center">
+          <Coins className="w-3.5 h-3.5 text-slate-950" />
+        </span>
+        <span>Support</span>
       </button>
 
-      {/* POP-UP MODAL QRIS SUPPORT */}
+      {/* MODAL QRIS SUPPORT */}
       {showSupportModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-3xl max-w-sm w-full p-6 text-center relative shadow-2xl">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-up">
+          <div className="glass-panel rounded-[2rem] max-w-sm w-full p-6 text-center relative">
             <button
               onClick={() => setShowSupportModal(false)}
-              className="absolute top-4 right-4 p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white"
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300"
             >
               <X className="w-4 h-4" />
             </button>
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto mb-3">
-              <Coins className="w-6 h-6" />
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-300 text-slate-950 flex items-center justify-center mx-auto mb-3 shadow-lg shadow-amber-500/30">
+              <Heart className="w-7 h-7 fill-slate-950" />
             </div>
-            <h3 className="text-lg font-bold text-white">
+            <h3 className="text-lg font-extrabold text-white">
               {globalSettings?.support_title || 'Support Sistem Ini Seikhlasmu'}
             </h3>
-            <p className="text-xs text-slate-400 mt-1 mb-4">
-              Scan atau simpan QRIS di bawah ini untuk mendukung pengembangan platform
+            <p className="text-xs text-slate-400 mt-1 mb-5">
+              Terima kasih sudah mendukung pengembangan teknologi lokal kami
             </p>
             {globalSettings?.support_qris_url ? (
-              <div className="bg-white p-3 rounded-2xl inline-block mx-auto mb-4">
+              <div className="bg-white p-3.5 rounded-2xl inline-block mx-auto mb-5 shadow-2xl">
                 <img
                   src={globalSettings.support_qris_url}
                   alt="QRIS Support"
@@ -384,7 +378,7 @@ export default function CustomerPublicPage() {
                 />
               </div>
             ) : (
-              <div className="p-6 bg-slate-950 rounded-2xl text-xs text-slate-500 mb-4">
+              <div className="p-6 bg-white/5 rounded-2xl text-xs text-slate-400 mb-5">
                 QRIS belum diunggah oleh Admin.
               </div>
             )}
@@ -394,9 +388,9 @@ export default function CustomerPublicPage() {
                 download="QRIS-Support-Reyyztore.png"
                 target="_blank"
                 rel="noreferrer"
-                className="block w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition"
+                className="block w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-extrabold text-xs shadow-lg shadow-amber-500/25 transition hover:brightness-105"
               >
-                Buka / Simpan Gambar QRIS
+                Simpan Gambar QRIS
               </a>
             )}
           </div>
@@ -404,57 +398,74 @@ export default function CustomerPublicPage() {
       )}
 
       {/* KONTEN UTAMA */}
-      <div className="max-w-lg mx-auto px-4 pt-14 space-y-6">
-        {/* Header Brand Tender X */}
-        <div className="text-center space-y-2">
+      <div className="max-w-md mx-auto px-4 pt-16 space-y-6 relative z-10">
+        {/* Header Brand */}
+        <div className="text-center space-y-2.5 animate-fade-up">
           {theme.logo_url && (
-            <img
-              src={theme.logo_url}
-              alt={tender.business_name}
-              className="w-20 h-20 rounded-2xl object-cover mx-auto shadow-xl border border-white/15"
-            />
+            <div className="relative inline-block">
+              <div
+                style={{ backgroundColor: accentColor }}
+                className="absolute inset-0 rounded-3xl blur-md opacity-60"
+              />
+              <img
+                src={theme.logo_url}
+                alt={tender.business_name}
+                className="relative w-20 h-20 rounded-3xl object-cover mx-auto border-2 border-white/25 shadow-2xl"
+              />
+            </div>
           )}
-          <span className="inline-block px-3 py-1 rounded-full text-[11px] font-semibold bg-white/10 text-slate-200">
-            {tender.business_name}
-          </span>
-          <h1 className="text-2xl font-extrabold tracking-tight">{theme.header_title}</h1>
-          <p className="text-xs text-slate-300 max-w-sm mx-auto">{theme.header_subtitle}</p>
+          <div>
+            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase bg-white/10 border border-white/10 text-white/90 backdrop-blur-md">
+              <Sparkles className="w-3 h-3 text-amber-300" /> {tender.business_name}
+            </span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">
+            {theme.header_title}
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-300/90 max-w-xs mx-auto leading-relaxed">
+            {theme.header_subtitle}
+          </p>
         </div>
 
-        {/* Notifikasi Berhasil + Tombol Share Instan ke WA / IG / Story */}
+        {/* Kartu Sukses + One-Click Share */}
         {submittedPhotoUrl !== null && (
-          <div className="p-5 rounded-3xl bg-emerald-500/15 border border-emerald-500/30 text-center space-y-3">
-            <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
-            <p className="text-sm font-bold text-white">Ulasan & Momenmu Sudah Live!</p>
+          <div className="glass-card-light rounded-[2rem] p-5 text-center space-y-3.5 border-emerald-400/30 animate-fade-up">
+            <div className="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-300 flex items-center justify-center mx-auto">
+              <CheckCircle2 className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-sm font-extrabold text-white">Momen & Ulasan Terkirim!</p>
+              <p className="text-[11px] text-slate-300">Langsung bagikan fotomu ke Story sekarang</p>
+            </div>
             {submittedPhotoUrl && (
               <img
                 src={submittedPhotoUrl}
                 alt="Hasil Foto"
-                className="w-44 h-44 object-cover rounded-2xl mx-auto border border-white/20 shadow-lg"
+                className="w-44 h-44 object-cover rounded-2xl mx-auto border-2 border-white/20 shadow-xl"
               />
             )}
             <button
               onClick={() => handleSocialShare(submittedPhotoUrl || undefined)}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 font-bold text-xs text-white flex items-center justify-center gap-2 shadow-lg"
+              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-pink-500 via-rose-500 to-amber-500 font-extrabold text-xs text-white flex items-center justify-center gap-2 shadow-lg shadow-pink-500/30 active:scale-95 transition"
             >
-              <Share2 className="w-4 h-4" /> Bagikan ke IG Story / WhatsApp
+              <Share2 className="w-4 h-4" /> Share ke IG Story / WhatsApp
             </button>
           </div>
         )}
 
-        {/* FORM ULASAN & KAMERA BERBINGKAI */}
+        {/* BENTO CARD FORM KAMERA & ULASAN */}
         <form
           onSubmit={handleSubmitReview}
-          className={`p-5 rounded-3xl border space-y-4 shadow-2xl ${
+          className={`p-5 rounded-[2rem] space-y-4 animate-fade-up ${
             theme.card_style === 'solid'
-              ? 'bg-slate-900 border-slate-800'
-              : 'bg-white/10 backdrop-blur-xl border-white/15'
+              ? 'bg-slate-900/95 border border-slate-800 shadow-2xl'
+              : 'glass-card-light'
           }`}
         >
-          {/* Area Kamera & Bingkai */}
-          <div className="space-y-3">
+          {/* Studio Kamera & Bingkai */}
+          <div>
             {cameraOpen ? (
-              <div className="relative rounded-2xl overflow-hidden bg-black aspect-square">
+              <div className="relative rounded-2xl overflow-hidden bg-black aspect-square shadow-inner">
                 <video
                   ref={videoRef}
                   autoPlay
@@ -462,33 +473,37 @@ export default function CustomerPublicPage() {
                   muted
                   className={`w-full h-full object-cover ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`}
                 />
-                <div className="absolute bottom-3 inset-x-0 flex items-center justify-center gap-3">
+                <div className="absolute inset-x-0 bottom-4 flex items-center justify-center gap-4">
                   <button
                     type="button"
                     onClick={switchCamera}
-                    className="p-3 rounded-full bg-black/60 text-white backdrop-blur-md"
+                    className="w-11 h-11 rounded-full bg-black/55 backdrop-blur-md border border-white/20 flex items-center justify-center text-white"
                   >
                     <RefreshCw className="w-5 h-5" />
                   </button>
                   <button
                     type="button"
                     onClick={captureFromCamera}
-                    style={{ backgroundColor: theme.primary_color || '#6366f1' }}
-                    className="px-6 py-3 rounded-full font-bold text-xs text-white shadow-xl"
+                    className="w-16 h-16 rounded-full bg-white p-1 shadow-2xl active:scale-90 transition"
                   >
-                    Jepret Foto
+                    <div
+                      style={{ backgroundColor: accentColor }}
+                      className="w-full h-full rounded-full flex items-center justify-center"
+                    >
+                      <Camera className="w-6 h-6 text-white" />
+                    </div>
                   </button>
                   <button
                     type="button"
                     onClick={stopCamera}
-                    className="p-3 rounded-full bg-red-600/80 text-white"
+                    className="w-11 h-11 rounded-full bg-rose-600/85 backdrop-blur-md flex items-center justify-center text-white"
                   >
                     <X className="w-5 h-5" />
                   </button>
                 </div>
               </div>
             ) : framedDataUrl ? (
-              <div className="relative rounded-2xl overflow-hidden aspect-square bg-black">
+              <div className="relative rounded-2xl overflow-hidden aspect-square bg-black shadow-xl">
                 <img src={framedDataUrl} alt="Preview Bingkai" className="w-full h-full object-cover" />
                 <button
                   type="button"
@@ -496,23 +511,30 @@ export default function CustomerPublicPage() {
                     setRawImageSrc('');
                     setFramedDataUrl('');
                   }}
-                  className="absolute top-3 right-3 px-3 py-1.5 rounded-full bg-black/70 text-white text-xs flex items-center gap-1"
+                  className="absolute top-3 right-3 px-3 py-1.5 rounded-full bg-black/70 backdrop-blur-md border border-white/15 text-white text-xs font-semibold flex items-center gap-1"
                 >
-                  <X className="w-3.5 h-3.5" /> Ganti Foto
+                  <X className="w-3.5 h-3.5" /> Ulangi
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => startCamera()}
-                  className="py-4 px-3 rounded-2xl bg-black/30 hover:bg-black/40 border border-white/15 flex flex-col items-center justify-center gap-1.5 text-xs font-medium transition"
+                  className="py-5 px-3 rounded-2xl bg-black/30 hover:bg-black/45 border border-white/10 flex flex-col items-center justify-center gap-2 text-xs font-semibold transition group"
                 >
-                  <Camera className="w-6 h-6 text-indigo-400" />
-                  <span>Buka Kamera</span>
+                  <div
+                    style={{ backgroundColor: `${accentColor}33` }}
+                    className="w-11 h-11 rounded-2xl flex items-center justify-center group-hover:scale-110 transition"
+                  >
+                    <Camera className="w-5 h-5 text-white" />
+                  </div>
+                  <span>Kamera Langsung</span>
                 </button>
-                <label className="py-4 px-3 rounded-2xl bg-black/30 hover:bg-black/40 border border-white/15 flex flex-col items-center justify-center gap-1.5 text-xs font-medium cursor-pointer transition">
-                  <ImageIcon className="w-6 h-6 text-pink-400" />
+                <label className="py-5 px-3 rounded-2xl bg-black/30 hover:bg-black/45 border border-white/10 flex flex-col items-center justify-center gap-2 text-xs font-semibold cursor-pointer transition group">
+                  <div className="w-11 h-11 rounded-2xl bg-pink-500/20 flex items-center justify-center group-hover:scale-110 transition">
+                    <ImageIcon className="w-5 h-5 text-pink-300" />
+                  </div>
                   <span>Pilih Galeri</span>
                   <input type="file" accept="image/*" onChange={handleGalleryUpload} className="hidden" />
                 </label>
@@ -520,116 +542,146 @@ export default function CustomerPublicPage() {
             )}
           </div>
 
-          {/* Rating Bintang */}
-          <div className="flex items-center justify-center gap-2 py-1">
-            {[1, 2, 3, 4, 5].map((num) => (
-              <button
-                key={num}
-                type="button"
-                onClick={() => setRating(num)}
-                className="p-1 transition transform hover:scale-110"
-              >
-                <Star
-                  className={`w-8 h-8 ${
-                    num <= rating ? 'text-amber-400 fill-amber-400' : 'text-slate-500'
-                  }`}
-                />
-              </button>
-            ))}
-          </div>
-
-          {/* Input Nomor WhatsApp Saja */}
-          <div>
-            <div className="relative">
-              <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="tel"
-                inputMode="numeric"
-                required
-                placeholder="Nomor WhatsApp (Contoh: 08123456789)"
-                value={whatsapp}
-                onChange={(e) => setWhatsapp(e.target.value.replace(/\D/g, ''))}
-                className="w-full pl-10 pr-4 py-3 rounded-xl bg-black/30 border border-white/15 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-white/40"
-              />
+          {/* Rating Bintang Interaktif */}
+          <div className="bg-black/25 rounded-2xl py-2.5 px-4 flex items-center justify-between border border-white/5">
+            <span className="text-xs font-medium text-slate-300">Beri Rating</span>
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((num) => (
+                <button
+                  key={num}
+                  type="button"
+                  onClick={() => setRating(num)}
+                  className="p-0.5 transition transform hover:scale-125 active:scale-95"
+                >
+                  <Star
+                    className={`w-7 h-7 transition ${
+                      num <= rating
+                        ? 'text-amber-400 fill-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]'
+                        : 'text-slate-600'
+                    }`}
+                  />
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Komentar / Ulasan */}
-          <div>
-            <textarea
-              rows={3}
+          {/* Input Nomor WhatsApp */}
+          <div className="relative">
+            <Phone className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+            <input
+              type="tel"
+              inputMode="numeric"
               required
-              placeholder="Tulis ulasan atau kesanmu di sini..."
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              className="w-full p-3.5 rounded-xl bg-black/30 border border-white/15 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-white/40"
+              placeholder="Nomor WhatsApp (08xxxxxxxxxx)"
+              value={whatsapp}
+              onChange={(e) => setWhatsapp(e.target.value.replace(/\D/g, ''))}
+              className="w-full pl-11 pr-4 py-3.5 rounded-2xl bg-black/35 border border-white/10 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-white/35 transition"
             />
           </div>
+
+          {/* Input Ulasan */}
+          <textarea
+            rows={3}
+            required
+            placeholder="Ceritakan pengalaman seru atau ulasanmu di sini..."
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            className="w-full p-4 rounded-2xl bg-black/35 border border-white/10 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-white/35 transition"
+          />
 
           <button
             type="submit"
             disabled={submitting}
-            style={{ backgroundColor: theme.primary_color || '#6366f1' }}
-            className="w-full py-3.5 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 shadow-lg transition hover:opacity-95 disabled:opacity-50"
+            style={{ backgroundColor: accentColor }}
+            className="w-full py-4 rounded-2xl font-extrabold text-sm text-white flex items-center justify-center gap-2 shadow-xl transition hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
           >
             <Send className="w-4 h-4" />
-            {submitting ? 'Mengirim...' : 'Kirim Ulasan Sekarang'}
+            {submitting ? 'Memposting Momen...' : 'Kirim Ulasan & Foto'}
           </button>
         </form>
 
-        {/* GALERI LIVE FEED REAL-TIME */}
-        <div className="space-y-3 pt-2">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-amber-400" /> Ulasan & Momen Terbaru ({reviews.length})
+        {/* LIVE SOCIAL WALL FEED */}
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-sm font-extrabold tracking-wide flex items-center gap-2">
+              <span>Live Wall Pelanggan</span>
+              <span className="px-2 py-0.5 rounded-full bg-white/10 text-[11px] font-bold">
+                {reviews.length}
+              </span>
             </h2>
-            <span className="text-[11px] text-emerald-400 flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" /> Live
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-bold text-emerald-300 uppercase tracking-wider">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" /> Real-Time
             </span>
           </div>
 
           {reviews.length === 0 ? (
-            <div className="p-8 rounded-2xl bg-white/5 border border-white/10 text-center text-xs text-slate-400">
-              Jadilah yang pertama membagikan momen & ulasan di sini!
+            <div className="p-10 rounded-[2rem] bg-white/5 border border-white/10 text-center space-y-1">
+              <p className="text-sm font-bold text-white/80">Belum ada postingan</p>
+              <p className="text-xs text-slate-400">Jadilah yang pertama muncul di dinding live ini!</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {reviews.map((rev) => (
                 <div
                   key={rev.id}
-                  className={`p-4 rounded-2xl border space-y-3 ${
+                  className={`rounded-[2rem] overflow-hidden animate-fade-up ${
                     theme.card_style === 'solid'
-                      ? 'bg-slate-900 border-slate-800'
-                      : 'bg-white/10 backdrop-blur-md border-white/15'
+                      ? 'bg-slate-900 border border-slate-800 shadow-xl'
+                      : 'glass-card-light'
                   }`}
                 >
                   {rev.photo_url && (
-                    <img
-                      src={rev.photo_url}
-                      alt="Momen Pelanggan"
-                      className="w-full aspect-square object-cover rounded-xl border border-white/10"
-                    />
-                  )}
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-mono text-slate-300">
-                      {maskPhone(rev.whatsapp_number)}
-                    </span>
-                    <div className="flex items-center gap-0.5 text-amber-400">
-                      {Array.from({ length: rev.rating }).map((_, i) => (
-                        <Star key={i} className="w-3.5 h-3.5 fill-amber-400" />
-                      ))}
+                    <div className="p-2.5 pb-0">
+                      <img
+                        src={rev.photo_url}
+                        alt="Momen Pelanggan"
+                        className="w-full aspect-square object-cover rounded-[1.5rem] border border-white/10"
+                      />
                     </div>
-                  </div>
-                  <p className="text-sm text-slate-100 leading-relaxed">{rev.comment}</p>
-                  <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px] text-slate-400">
-                    <span>{new Date(rev.created_at).toLocaleDateString('id-ID')}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleSocialShare(rev.photo_url, rev.comment)}
-                      className="inline-flex items-center gap-1 text-white/90 hover:text-white font-medium bg-white/10 px-2.5 py-1 rounded-lg"
-                    >
-                      <Share2 className="w-3 h-3" /> Share WA / IG / Story
-                    </button>
+                  )}
+
+                  <div className="p-5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div
+                          style={{ backgroundColor: `${accentColor}40` }}
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border border-white/15"
+                        >
+                          {rev.whatsapp_number.slice(-2)}
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold font-mono text-white">
+                            {maskPhone(rev.whatsapp_number)}
+                          </p>
+                          <p className="text-[10px] text-slate-400">
+                            {new Date(rev.created_at).toLocaleDateString('id-ID', {
+                              day: 'numeric',
+                              month: 'short',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-0.5 bg-black/30 px-2.5 py-1 rounded-full">
+                        {Array.from({ length: rev.rating }).map((_, i) => (
+                          <Star key={i} className="w-3 h-3 text-amber-400 fill-amber-400" />
+                        ))}
+                      </div>
+                    </div>
+
+                    <p className="text-sm text-slate-100 leading-relaxed">{rev.comment}</p>
+
+                    <div className="pt-2 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => handleSocialShare(rev.photo_url, rev.comment)}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-white/10 hover:bg-white/20 border border-white/10 px-3.5 py-2 rounded-xl transition active:scale-95"
+                      >
+                        <Share2 className="w-3.5 h-3.5" /> Share WA / IG / Story
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -638,13 +690,13 @@ export default function CustomerPublicPage() {
         </div>
       </div>
 
-      {/* BAWAH TENGAH: WATERMARK PERMANEN REYYZTORE */}
-      <footer className="fixed bottom-0 inset-x-0 py-2.5 bg-slate-950/85 backdrop-blur-md border-t border-white/10 text-center z-30">
+      {/* BAWAH TENGAH: FLOATING CAPSULE WATERMARK REYYZTORE */}
+      <footer className="fixed bottom-3 inset-x-0 flex justify-center pointer-events-none z-30">
         <a
           href={globalSettings?.watermark_url || 'https://wa.me/6283830108419'}
           target="_blank"
           rel="noreferrer"
-          className="text-xs text-slate-400 hover:text-white transition"
+          className="pointer-events-auto px-4 py-1.5 rounded-full bg-slate-950/80 backdrop-blur-xl border border-white/10 text-[11px] font-medium text-slate-300 hover:text-white hover:border-white/25 shadow-2xl transition"
         >
           {globalSettings?.watermark_text || 'Powered by Reyyztore'}
         </a>
