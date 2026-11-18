@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import AdminChart from '@/components/AdminChart';
 import {
   Users, MessageSquare, QrCode, Plus, Trash2, ExternalLink, Download,
-  Search, LogOut, Power, Upload, Phone, Star, Eye, EyeOff, ArrowUpRight, Sparkles, LayoutGrid
+  Search, LogOut, Power, Upload, Phone, Eye, EyeOff, ArrowUpRight, Sparkles, LayoutGrid
 } from 'lucide-react';
 
 export default function SuperAdminPage() {
@@ -15,6 +15,7 @@ export default function SuperAdminPage() {
   const [tenders, setTenders] = useState<any[]>([]);
   const [allReviews, setAllReviews] = useState<any[]>([]);
   const [globalSettings, setGlobalSettings] = useState<any>({
+    id: 1,
     support_qris_url: '',
     support_title: 'Support Sistem Ini Seikhlasmu',
     watermark_text: 'Powered by Reyyztore',
@@ -79,18 +80,48 @@ export default function SuperAdminPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingQris(true);
-    const fileName = `qris-${Date.now()}.${file.name.split('.').pop()}`;
-    const { error } = await supabase.storage.from('assets').upload(fileName, file);
-    if (!error) {
-      const { data } = supabase.storage.from('assets').getPublicUrl(fileName);
-      setGlobalSettings({ ...globalSettings, support_qris_url: data.publicUrl });
+    const fileName = `qris-${Date.now()}.${file.name.split('.').pop() || 'png'}`;
+
+    const { error: upErr } = await supabase.storage
+      .from('assets')
+      .upload(fileName, file, { upsert: true, contentType: file.type });
+
+    if (upErr) {
+      alert('Gagal upload QRIS: ' + upErr.message);
+      setUploadingQris(false);
+      return;
     }
+
+    const { data } = supabase.storage.from('assets').getPublicUrl(fileName);
+    const updated = {
+      id: 1,
+      support_qris_url: data.publicUrl,
+      support_title: globalSettings.support_title || 'Support Sistem Ini Seikhlasmu',
+      watermark_text: globalSettings.watermark_text || 'Powered by Reyyztore',
+      watermark_url: globalSettings.watermark_url || 'https://wa.me/6283830108419',
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error: dbErr } = await supabase.from('global_settings').upsert(updated, { onConflict: 'id' });
+    setGlobalSettings(updated);
     setUploadingQris(false);
+
+    if (dbErr) alert('Upload sukses, gagal simpan DB: ' + dbErr.message);
+    else alert('QRIS berhasil diupload dan langsung aktif di semua halaman pelanggan!');
   };
 
   const handleSaveGlobalSettings = async () => {
-    const { error } = await supabase.from('global_settings').update(globalSettings).eq('id', 1);
-    if (!error) alert('Pengaturan tersimpan!');
+    const { error } = await supabase.from('global_settings').upsert({
+      id: 1,
+      support_qris_url: globalSettings.support_qris_url || '',
+      support_title: globalSettings.support_title,
+      watermark_text: globalSettings.watermark_text,
+      watermark_url: globalSettings.watermark_url,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'id' });
+
+    if (error) alert('Gagal menyimpan: ' + error.message);
+    else alert('Pengaturan QRIS & Watermark berhasil disimpan!');
   };
 
   const filteredReviews = allReviews.filter((r) => {
@@ -296,15 +327,22 @@ export default function SuperAdminPage() {
           {activeTab === 'qris' && (
             <div className="max-w-lg glass-v7 rounded-3xl p-6 space-y-4">
               <h2 className="font-bold text-lg text-white">QRIS Support & Watermark</h2>
-              <label className="flex items-center justify-center gap-2 p-4 border border-dashed border-white/20 rounded-2xl cursor-pointer text-xs">
-                <Upload className="w-4 h-4 text-amber-400" /> {uploadingQris ? 'Mengunggah...' : 'Upload QRIS'}
+              <label className="flex items-center justify-center gap-2 p-4 border border-dashed border-white/20 rounded-2xl cursor-pointer text-xs hover:border-amber-400 transition">
+                <Upload className="w-4 h-4 text-amber-400" /> {uploadingQris ? 'Mengunggah QRIS...' : 'Pilih & Upload Gambar QRIS'}
                 <input type="file" accept="image/*" onChange={handleUploadQris} className="hidden" />
               </label>
-              {globalSettings.support_qris_url && <img src={globalSettings.support_qris_url} alt="QRIS" className="w-40 mx-auto rounded-xl bg-white p-2" />}
-              <input type="text" value={globalSettings.support_title} onChange={(e) => setGlobalSettings({ ...globalSettings, support_title: e.target.value })} className="w-full px-4 py-3 bg-black/35 border border-white/10 rounded-2xl text-sm text-white" />
-              <input type="text" value={globalSettings.watermark_text} onChange={(e) => setGlobalSettings({ ...globalSettings, watermark_text: e.target.value })} className="w-full px-4 py-3 bg-black/35 border border-white/10 rounded-2xl text-sm text-white" />
-              <input type="text" value={globalSettings.watermark_url} onChange={(e) => setGlobalSettings({ ...globalSettings, watermark_url: e.target.value })} className="w-full px-4 py-3 bg-black/35 border border-white/10 rounded-2xl text-sm text-amber-300" />
-              <button onClick={handleSaveGlobalSettings} className="w-full py-3.5 bg-amber-400 text-stone-950 font-bold rounded-2xl text-sm">Simpan Pengaturan</button>
+              {globalSettings.support_qris_url ? (
+                <div className="bg-white p-3 rounded-2xl w-48 mx-auto shadow-xl text-center">
+                  <img src={globalSettings.support_qris_url} alt="QRIS Aktif" className="w-full h-auto rounded-xl" />
+                  <p className="text-[10px] font-bold text-emerald-600 mt-1.5">✓ QRIS Aktif di Web Pelanggan</p>
+                </div>
+              ) : (
+                <p className="text-xs text-center text-stone-400">Belum ada gambar QRIS yang terpasang.</p>
+              )}
+              <input type="text" value={globalSettings.support_title} onChange={(e) => setGlobalSettings({ ...globalSettings, support_title: e.target.value })} placeholder="Judul Pop-up Support" className="w-full px-4 py-3 bg-black/35 border border-white/10 rounded-2xl text-sm text-white" />
+              <input type="text" value={globalSettings.watermark_text} onChange={(e) => setGlobalSettings({ ...globalSettings, watermark_text: e.target.value })} placeholder="Teks Watermark" className="w-full px-4 py-3 bg-black/35 border border-white/10 rounded-2xl text-sm text-white" />
+              <input type="text" value={globalSettings.watermark_url} onChange={(e) => setGlobalSettings({ ...globalSettings, watermark_url: e.target.value })} placeholder="Link Watermark" className="w-full px-4 py-3 bg-black/35 border border-white/10 rounded-2xl text-sm text-amber-300" />
+              <button onClick={handleSaveGlobalSettings} className="w-full py-3.5 bg-amber-400 text-stone-950 font-bold rounded-2xl text-sm shadow-lg">Simpan Teks & Link</button>
             </div>
           )}
         </div>
