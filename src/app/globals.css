@@ -4,21 +4,16 @@
 
 @layer base {
   body {
-    background-color: #050811;
-    color: #f8fafc;
+    background-color: #14110f;
+    color: #fafaf9;
     overflow-x: hidden;
   }
-}
-
-@keyframes floatSlow {
-  0%, 100% { transform: translateY(0px) scale(1); }
-  50% { transform: translateY(-12px) scale(1.03); }
 }
 
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(14px);
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
@@ -26,26 +21,44 @@
   }
 }
 
-.animate-float {
-  animation: floatSlow 6s ease-in-out infinite;
-}
-
 .animate-fade-up {
   animation: fadeInUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-.glass-panel {
-  background: rgba(15, 23, 42, 0.62);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+/* Smoked Glass Panel ala Glassy V7 */
+.glass-v7 {
+  background: rgba(34, 29, 26, 0.58);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
 }
 
-.glass-card-light {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.11) 0%, rgba(255, 255, 255, 0.04) 100%);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 0 12px 35px -10px rgba(0, 0, 0, 0.5);
+/* Kartu Kaca dengan Hover Lift halus */
+.glass-v7-card {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.03) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.45);
+  transition: transform 0.25s ease, border-color 0.25s ease;
+}
+
+.glass-v7-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(251, 191, 36, 0.35);
+}
+
+/* Kartu Highlight Gradasi Emas/Amber seperti kartu pertama di referensi */
+.glass-v7-amber {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.85) 0%, rgba(217, 119, 6, 0.55) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(253, 224, 71, 0.4);
+  box-shadow: 0 15px 35px -5px rgba(245, 158, 11, 0.3);
+  transition: transform 0.25s ease;
+}
+
+.glass-v7-amber:hover {
+  transform: translateY(-4px);
 }
