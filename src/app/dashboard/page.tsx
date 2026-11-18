@@ -6,7 +6,8 @@ import { supabase } from '@/lib/supabase';
 import { QRCodeCanvas } from 'qrcode.react';
 import {
   QrCode, MessageSquare, Palette, Download, Eye, EyeOff, Edit3,
-  Trash2, LogOut, ExternalLink, Upload, Check, X, Phone, Star, Image as ImageIcon
+  Trash2, LogOut, ExternalLink, Upload, Check, X, Phone, Star,
+  Image as ImageIcon, ArrowUpRight, Sparkles
 } from 'lucide-react';
 
 const PRESET_FRAMES = [
@@ -24,17 +25,15 @@ export default function TenderDashboardPage() {
   const [activeTab, setActiveTab] = useState<'qr' | 'reviews' | 'theme'>('qr');
   const [publicUrl, setPublicUrl] = useState('');
 
-  // State Edit Ulasan
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editComment, setEditComment] = useState('');
 
-  // State Theme Editor
   const [theme, setTheme] = useState<any>({
     logo_url: '',
     header_title: 'Bagikan Momen & Ulasanmu!',
     header_subtitle: 'Ambil foto kece dengan bingkai spesial kami dan tinggalkan ulasanmu.',
-    primary_color: '#6366f1',
-    bg_color: '#0f172a',
+    primary_color: '#f59e0b',
+    bg_color: '#14110f',
     card_style: 'glass',
     active_frame_url: '',
     require_photo: false,
@@ -61,7 +60,6 @@ export default function TenderDashboardPage() {
     }
     loadTenderAndReviews(parsed.id);
 
-    // Realtime listener untuk ulasan masuk baru
     const channel = supabase
       .channel(`tender-reviews-${parsed.id}`)
       .on(
@@ -156,388 +154,326 @@ export default function TenderDashboardPage() {
   };
 
   if (!tenderData) {
-    return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">Memuat Dashboard...</div>;
+    return <div className="min-h-screen bg-[#14110f] flex items-center justify-center text-stone-400">Memuat Dashboard...</div>;
   }
 
+  const visibleCount = reviews.filter((r) => r.is_visible).length;
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 pb-20">
-      {/* Header */}
-      <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-30">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="font-bold text-lg text-white">{tenderData.business_name}</h1>
-            <p className="text-xs text-slate-400">Dashboard Kontrol & Moderasi Ulasan</p>
+    <div className="min-h-screen bg-[#14110f] text-stone-100 relative overflow-hidden pb-20">
+      {/* Warm Ambient Orbs */}
+      <div className="fixed -top-32 -left-24 w-[420px] h-[420px] bg-amber-600/20 rounded-full blur-[140px] pointer-events-none" />
+      <div className="fixed bottom-0 right-0 w-[400px] h-[400px] bg-orange-500/15 rounded-full blur-[140px] pointer-events-none" />
+
+      <div className="max-w-6xl mx-auto px-4 pt-5 flex flex-col lg:flex-row gap-5 relative z-10">
+        {/* Floating Pill Sidebar */}
+        <aside className="lg:w-16 glass-v7 rounded-3xl lg:rounded-full p-2.5 flex lg:flex-col items-center justify-between lg:justify-start gap-3 h-fit lg:sticky lg:top-5">
+          <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-amber-400 to-orange-400 flex items-center justify-center text-stone-950 font-black shadow-lg shrink-0">
+            {tenderData.business_name.slice(0, 1).toUpperCase()}
           </div>
-          <div className="flex items-center gap-2">
+
+          <nav className="flex lg:flex-col items-center gap-2">
+            {[
+              { id: 'qr', icon: QrCode, label: 'QR Code' },
+              { id: 'reviews', icon: MessageSquare, label: 'Moderasi Ulasan' },
+              { id: 'theme', icon: Palette, label: 'Edit Tampilan' },
+            ].map((item) => {
+              const Icon = item.icon;
+              const active = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id as any)}
+                  title={item.label}
+                  className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${
+                    active
+                      ? 'bg-amber-400 text-stone-950 shadow-lg shadow-amber-400/30 scale-105'
+                      : 'text-stone-400 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  <Icon className="w-5 h-5" />
+                </button>
+              );
+            })}
+          </nav>
+
+          <button
+            onClick={handleLogout}
+            className="w-11 h-11 rounded-full bg-white/5 hover:bg-rose-500/20 text-stone-400 hover:text-rose-300 flex items-center justify-center lg:mt-auto transition"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </aside>
+
+        {/* Main Content */}
+        <div className="flex-1 space-y-5">
+          <header className="glass-v7 rounded-3xl px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <p className="text-xs text-amber-300/90 font-medium flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" /> Client Dashboard
+              </p>
+              <h1 className="text-2xl font-bold text-white mt-0.5">{tenderData.business_name}</h1>
+            </div>
             <a
               href={`/t/${tenderData.slug}`}
               target="_blank"
               rel="noreferrer"
-              className="px-3.5 py-2 rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-600 hover:text-white text-xs font-medium flex items-center gap-1.5 transition"
+              className="px-4 py-2.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-400 text-stone-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow-lg transition hover:brightness-105"
             >
-              <ExternalLink className="w-3.5 h-3.5" /> Lihat Web Pelanggan
+              <ExternalLink className="w-3.5 h-3.5" /> Buka Web Pelanggan
             </a>
-            <button
-              onClick={handleLogout}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </header>
+          </header>
 
-      <main className="max-w-6xl mx-auto px-4 pt-6 space-y-6">
-        {/* Tabs */}
-        <div className="flex flex-wrap gap-2 border-b border-slate-800 pb-3">
-          <button
-            onClick={() => setActiveTab('qr')}
-            className={`px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 transition ${
-              activeTab === 'qr' ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-slate-400 hover:text-white'
-            }`}
-          >
-            <QrCode className="w-4 h-4" /> QR Code Tender
-          </button>
-          <button
-            onClick={() => setActiveTab('reviews')}
-            className={`px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 transition ${
-              activeTab === 'reviews' ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-slate-400 hover:text-white'
-            }`}
-          >
-            <MessageSquare className="w-4 h-4" /> Kelola Ulasan ({reviews.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('theme')}
-            className={`px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 transition ${
-              activeTab === 'theme' ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-slate-400 hover:text-white'
-            }`}
-          >
-            <Palette className="w-4 h-4" /> Edit Tampilan & Bingkai
-          </button>
-        </div>
-
-        {/* TAB 1: QR CODE TENDER */}
-        {activeTab === 'qr' && (
-          <div className="max-w-md mx-auto bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-6">
-            <div>
-              <h2 className="text-xl font-bold text-white">QR Code {tenderData.business_name}</h2>
-              <p className="text-xs text-slate-400 mt-1">
-                Cetak atau tampilkan QR ini agar pelanggan bisa foto berbingkai & memberi ulasan
-              </p>
+          {/* Bento Stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="glass-v7-amber rounded-3xl p-5 flex flex-col justify-between">
+              <span className="text-xs font-bold uppercase text-stone-950/80">Total Ulasan Masuk</span>
+              <div className="mt-3 flex items-end justify-between">
+                <span className="text-3xl font-black text-stone-950">{reviews.length}</span>
+                <span className="text-xs font-bold text-stone-950 bg-white/30 px-2.5 py-0.5 rounded-full">
+                  Real-time
+                </span>
+              </div>
             </div>
 
-            <div ref={qrRef} className="bg-white p-6 rounded-2xl inline-block shadow-xl">
-              {publicUrl && (
-                <QRCodeCanvas
-                  value={publicUrl}
-                  size={240}
-                  level="H"
-                  includeMargin={true}
-                />
-              )}
+            <div className="glass-v7-card rounded-3xl p-5 flex flex-col justify-between">
+              <span className="text-xs text-stone-300">Tampil di Publik</span>
+              <div className="mt-3 flex items-end justify-between">
+                <span className="text-3xl font-bold text-white">{visibleCount}</span>
+                <span className="text-xs font-semibold text-emerald-400 flex items-center gap-0.5">
+                  <ArrowUpRight className="w-3.5 h-3.5" /> Aktif
+                </span>
+              </div>
             </div>
 
-            <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-indigo-400 break-all">
-              {publicUrl}
+            <div className="glass-v7-card rounded-3xl p-5 flex flex-col justify-between">
+              <span className="text-xs text-stone-300">Disembunyikan (Hidden)</span>
+              <div className="mt-3 flex items-end justify-between">
+                <span className="text-3xl font-bold text-white">{reviews.length - visibleCount}</span>
+                <span className="text-xs text-stone-400">Moderasi</span>
+              </div>
             </div>
-
-            <button
-              onClick={downloadQR}
-              className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-semibold text-sm text-white flex items-center justify-center gap-2 transition shadow-lg shadow-indigo-600/25"
-            >
-              <Download className="w-4 h-4" /> Download QR Code (PNG)
-            </button>
           </div>
-        )}
 
-        {/* TAB 2: MODERASI ULASAN (EDIT / HIDE / DELETE) */}
-        {activeTab === 'reviews' && (
-          <div className="space-y-4">
-            {reviews.length === 0 ? (
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center text-slate-500 text-sm">
-                Belum ada ulasan atau foto masuk. Bagikan QR Code Anda untuk mulai menerima ulasan!
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {reviews.map((rev) => (
-                  <div
-                    key={rev.id}
-                    className={`bg-slate-900 border rounded-2xl p-5 flex flex-col justify-between gap-4 transition ${
-                      rev.is_visible ? 'border-slate-800' : 'border-amber-500/40 opacity-75'
-                    }`}
-                  >
-                    <div className="flex gap-4">
-                      {rev.photo_url && (
-                        <a href={rev.photo_url} target="_blank" rel="noreferrer" className="shrink-0">
-                          <img
-                            src={rev.photo_url}
-                            alt="Foto Pelanggan"
-                            className="w-24 h-24 object-cover rounded-xl border border-slate-700"
-                          />
-                        </a>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="inline-flex items-center gap-1 text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">
-                            <Phone className="w-3 h-3" /> {rev.whatsapp_number}
-                          </span>
-                          <span
-                            className={`text-[11px] px-2 py-0.5 rounded-full ${
-                              rev.is_visible ? 'bg-emerald-500/15 text-emerald-400' : 'bg-amber-500/20 text-amber-300'
-                            }`}
-                          >
-                            {rev.is_visible ? 'Tampil Publik' : 'Disembunyikan'}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-1 text-amber-400 my-1.5">
-                          {Array.from({ length: rev.rating }).map((_, idx) => (
-                            <Star key={idx} className="w-3.5 h-3.5 fill-amber-400" />
-                          ))}
-                        </div>
-
-                        {editingId === rev.id ? (
-                          <div className="space-y-2 mt-2">
-                            <textarea
-                              rows={2}
-                              value={editComment}
-                              onChange={(e) => setEditComment(e.target.value)}
-                              className="w-full p-2 bg-slate-950 border border-indigo-500 rounded-lg text-xs text-white"
-                            />
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => saveEditedComment(rev.id)}
-                                className="px-3 py-1 bg-emerald-600 text-white rounded-lg text-xs flex items-center gap-1"
-                              >
-                                <Check className="w-3 h-3" /> Simpan
-                              </button>
-                              <button
-                                onClick={() => setEditingId(null)}
-                                className="px-3 py-1 bg-slate-800 text-slate-300 rounded-lg text-xs flex items-center gap-1"
-                              >
-                                <X className="w-3 h-3" /> Batal
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <p className="text-sm text-slate-200 break-words">{rev.comment}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Tombol Aksi Moderasi */}
-                    <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
-                      <span className="text-slate-500">
-                        {new Date(rev.created_at).toLocaleString('id-ID')}
-                      </span>
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => toggleVisibility(rev.id, rev.is_visible)}
-                          className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 flex items-center gap-1 transition"
-                        >
-                          {rev.is_visible ? <><EyeOff className="w-3.5 h-3.5" /> Sembunyikan</> : <><Eye className="w-3.5 h-3.5" /> Tampilkan</>}
-                        </button>
-                        <button
-                          onClick={() => {
-                            setEditingId(rev.id);
-                            setEditComment(rev.comment);
-                          }}
-                          className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white flex items-center gap-1 transition"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" /> Edit
-                        </button>
-                        <button
-                          onClick={() => deleteReview(rev.id)}
-                          className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-red-600 text-slate-300 hover:text-white flex items-center gap-1 transition"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" /> Hapus
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* TAB 3: FULL THEME & FRAME EDITOR */}
-        {activeTab === 'theme' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5">
-              <h2 className="font-bold text-lg text-white">Kustomisasi Tampilan Halaman Pelanggan</h2>
-
-              {/* Logo */}
+          {/* TAB 1: QR CODE */}
+          {activeTab === 'qr' && (
+            <div className="max-w-md mx-auto glass-v7 rounded-[2rem] p-8 text-center space-y-6 animate-fade-up">
               <div>
-                <label className="block text-xs text-slate-400 mb-1.5">Logo Brand / Tender</label>
-                <div className="flex items-center gap-3">
-                  {theme.logo_url && (
-                    <img src={theme.logo_url} alt="Logo" className="w-12 h-12 rounded-xl object-cover border border-slate-700" />
-                  )}
-                  <label className="px-4 py-2.5 bg-slate-950 border border-slate-800 hover:border-indigo-500 rounded-xl text-xs text-slate-300 cursor-pointer flex items-center gap-2">
-                    <Upload className="w-4 h-4 text-indigo-400" />
-                    {uploadingAsset ? 'Mengunggah...' : 'Upload Logo'}
-                    <input type="file" accept="image/*" onChange={(e) => handleUploadFile(e, 'logo')} className="hidden" />
-                  </label>
-                </div>
+                <h2 className="text-xl font-bold text-white">QR Code {tenderData.business_name}</h2>
+                <p className="text-xs text-stone-400 mt-1">
+                  Scan QR ini untuk membuka kamera bingkai & form ulasan
+                </p>
               </div>
 
-              {/* Judul & Deskripsi */}
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">Judul Utama Halaman</label>
-                <input
-                  type="text"
-                  value={theme.header_title}
-                  onChange={(e) => setTheme({ ...theme, header_title: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white"
-                />
+              <div ref={qrRef} className="bg-white p-6 rounded-3xl inline-block shadow-2xl">
+                {publicUrl && <QRCodeCanvas value={publicUrl} size={230} level="H" includeMargin={true} />}
               </div>
 
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">Sub-judul / Teks Sambutan</label>
-                <textarea
-                  rows={2}
-                  value={theme.header_subtitle}
-                  onChange={(e) => setTheme({ ...theme, header_subtitle: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white"
-                />
-              </div>
-
-              {/* Warna */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1">Warna Tombol / Aksen</label>
-                  <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 p-2 rounded-xl">
-                    <input
-                      type="color"
-                      value={theme.primary_color}
-                      onChange={(e) => setTheme({ ...theme, primary_color: e.target.value })}
-                      className="w-8 h-8 rounded cursor-pointer bg-transparent border-0"
-                    />
-                    <span className="text-xs font-mono text-slate-300">{theme.primary_color}</span>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1">Warna Latar Belakang</label>
-                  <div className="flex items-center gap-2 bg-slate-950 border border-slate-800 p-2 rounded-xl">
-                    <input
-                      type="color"
-                      value={theme.bg_color}
-                      onChange={(e) => setTheme({ ...theme, bg_color: e.target.value })}
-                      className="w-8 h-8 rounded cursor-pointer bg-transparent border-0"
-                    />
-                    <span className="text-xs font-mono text-slate-300">{theme.bg_color}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Gaya Kartu */}
-              <div>
-                <label className="block text-xs text-slate-400 mb-1.5">Gaya Kartu Ulasan</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {(['glass', 'solid'] as const).map((style) => (
-                    <button
-                      key={style}
-                      type="button"
-                      onClick={() => setTheme({ ...theme, card_style: style })}
-                      className={`py-2.5 px-3 rounded-xl text-xs font-medium border capitalize ${
-                        theme.card_style === style
-                          ? 'bg-indigo-600/20 border-indigo-500 text-white'
-                          : 'bg-slate-950 border-slate-800 text-slate-400'
-                      }`}
-                    >
-                      {style === 'glass' ? 'Glassmorphism Modern' : 'Dark Solid Clean'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Pilihan Bingkai Kamera */}
-              <div className="space-y-3 pt-2 border-t border-slate-800">
-                <label className="block text-xs font-semibold text-indigo-400 uppercase tracking-wider">
-                  Bingkai Foto Kamera Pelanggan
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {PRESET_FRAMES.map((pf) => (
-                    <button
-                      key={pf.id}
-                      type="button"
-                      onClick={() => setTheme({ ...theme, active_frame_url: pf.url })}
-                      className={`p-2.5 rounded-xl text-xs text-left border transition ${
-                        theme.active_frame_url === pf.url
-                          ? 'bg-indigo-600/20 border-indigo-500 text-white'
-                          : 'bg-slate-950 border-slate-800 text-slate-400'
-                      }`}
-                    >
-                      {pf.name}
-                    </button>
-                  ))}
-                </div>
-
-                <div>
-                  <label className="flex items-center justify-center gap-2 px-4 py-3 border border-dashed border-slate-700 hover:border-indigo-500 rounded-xl cursor-pointer text-xs text-slate-300">
-                    <ImageIcon className="w-4 h-4 text-indigo-400" />
-                    Upload Bingkai Custom (PNG Transparan)
-                    <input type="file" accept="image/png" onChange={(e) => handleUploadFile(e, 'frame')} className="hidden" />
-                  </label>
-                  {theme.active_frame_url && !theme.active_frame_url.startsWith('preset:') && (
-                    <p className="text-[11px] text-emerald-400 mt-1.5">✓ Bingkai custom PNG aktif terpasang</p>
-                  )}
-                </div>
+              <div className="p-3 bg-black/35 border border-white/10 rounded-2xl text-xs font-mono text-amber-300 break-all">
+                {publicUrl}
               </div>
 
               <button
-                onClick={saveThemeConfig}
-                disabled={savingTheme}
-                className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-semibold text-sm text-white transition shadow-lg"
+                onClick={downloadQR}
+                className="w-full py-3.5 bg-gradient-to-r from-amber-400 to-orange-400 text-stone-950 font-bold rounded-2xl text-sm flex items-center justify-center gap-2 shadow-lg transition"
               >
-                {savingTheme ? 'Menyimpan Perubahan...' : 'Simpan & Terapkan ke Web Pelanggan'}
+                <Download className="w-4 h-4" /> Download QR Code (PNG)
               </button>
             </div>
+          )}
 
-            {/* Live Mini Preview */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-              <p className="text-xs text-slate-400 uppercase tracking-wider mb-3">Live Preview Tampilan Pelanggan</p>
-              <div
-                style={{ backgroundColor: theme.bg_color }}
-                className="rounded-3xl p-6 border border-slate-700/60 min-h-[460px] flex flex-col items-center text-center transition-colors"
-              >
-                {theme.logo_url && (
-                  <img src={theme.logo_url} alt="Logo" className="w-16 h-16 rounded-2xl object-cover mb-3 shadow-lg" />
-                )}
-                <h3 className="text-xl font-bold text-white">{theme.header_title}</h3>
-                <p className="text-xs text-slate-300 mt-1 max-w-xs">{theme.header_subtitle}</p>
-
+          {/* TAB 2: MODERASI ULASAN */}
+          {activeTab === 'reviews' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-up">
+              {reviews.map((rev) => (
                 <div
-                  className={`w-full mt-6 p-4 rounded-2xl border text-left space-y-3 ${
-                    theme.card_style === 'glass'
-                      ? 'bg-white/10 backdrop-blur-md border-white/15'
-                      : 'bg-slate-900 border-slate-800'
+                  key={rev.id}
+                  className={`glass-v7-card rounded-3xl p-5 flex flex-col justify-between gap-4 ${
+                    !rev.is_visible ? 'opacity-65 border-amber-500/40' : ''
                   }`}
                 >
-                  <div className="h-28 rounded-xl bg-black/30 border border-white/10 flex items-center justify-center text-xs text-slate-300">
-                    Area Kamera + Bingkai Aktif
+                  <div className="flex gap-4">
+                    {rev.photo_url && (
+                      <a href={rev.photo_url} target="_blank" rel="noreferrer" className="shrink-0">
+                        <img src={rev.photo_url} alt="Foto" className="w-24 h-24 object-cover rounded-2xl border border-white/15" />
+                      </a>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="inline-flex items-center gap-1 text-xs font-mono text-emerald-300 bg-emerald-500/15 px-2.5 py-0.5 rounded-full">
+                          <Phone className="w-3 h-3" /> {rev.whatsapp_number}
+                        </span>
+                        <span className={`text-[11px] px-2.5 py-0.5 rounded-full ${rev.is_visible ? 'bg-emerald-500/15 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}`}>
+                          {rev.is_visible ? 'Tampil' : 'Hidden'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-0.5 text-amber-400 my-1.5">
+                        {Array.from({ length: rev.rating }).map((_, idx) => (
+                          <Star key={idx} className="w-3.5 h-3.5 fill-amber-400" />
+                        ))}
+                      </div>
+
+                      {editingId === rev.id ? (
+                        <div className="space-y-2 mt-2">
+                          <textarea
+                            rows={2}
+                            value={editComment}
+                            onChange={(e) => setEditComment(e.target.value)}
+                            className="w-full p-2.5 bg-black/40 border border-amber-400 rounded-xl text-xs text-white"
+                          />
+                          <div className="flex gap-2">
+                            <button onClick={() => saveEditedComment(rev.id)} className="px-3 py-1 bg-emerald-500 text-stone-950 font-bold rounded-full text-xs flex items-center gap-1">
+                              <Check className="w-3 h-3" /> Simpan
+                            </button>
+                            <button onClick={() => setEditingId(null)} className="px-3 py-1 bg-white/10 text-stone-300 rounded-full text-xs flex items-center gap-1">
+                              <X className="w-3 h-3" /> Batal
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-stone-200 break-words">{rev.comment}</p>
+                      )}
+                    </div>
                   </div>
-                  <div className="h-9 rounded-lg bg-black/30 border border-white/10 px-3 flex items-center text-xs text-slate-400">
-                    Nomor WhatsApp (08xx...)
+
+                  <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs">
+                    <span className="text-stone-400">{new Date(rev.created_at).toLocaleDateString('id-ID')}</span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => toggleVisibility(rev.id, rev.is_visible)}
+                        className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-amber-400 hover:text-stone-950 text-stone-200 flex items-center gap-1 transition"
+                      >
+                        {rev.is_visible ? <><EyeOff className="w-3.5 h-3.5" /> Hide</> : <><Eye className="w-3.5 h-3.5" /> Show</>}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingId(rev.id);
+                          setEditComment(rev.comment);
+                        }}
+                        className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-stone-200 flex items-center gap-1 transition"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" /> Edit
+                      </button>
+                      <button
+                        onClick={() => deleteReview(rev.id)}
+                        className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-rose-500 text-stone-200 hover:text-white flex items-center gap-1 transition"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Hapus
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    style={{ backgroundColor: theme.primary_color }}
-                    className="w-full py-2.5 rounded-xl text-xs font-semibold text-white"
-                  >
-                    Kirim Ulasan & Foto
-                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* TAB 3: THEME & FRAME EDITOR */}
+          {activeTab === 'theme' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-up">
+              <div className="glass-v7 rounded-3xl p-6 space-y-5">
+                <h2 className="font-bold text-lg text-white">Edit Tampilan & Bingkai Kamera</h2>
+
+                <div>
+                  <label className="block text-xs text-stone-400 mb-1.5">Logo Brand</label>
+                  <div className="flex items-center gap-3">
+                    {theme.logo_url && <img src={theme.logo_url} alt="Logo" className="w-12 h-12 rounded-2xl object-cover border border-white/15" />}
+                    <label className="px-4 py-2.5 bg-black/35 border border-white/10 hover:border-amber-400 rounded-2xl text-xs text-stone-200 cursor-pointer flex items-center gap-2">
+                      <Upload className="w-4 h-4 text-amber-400" />
+                      {uploadingAsset ? 'Mengunggah...' : 'Upload Logo'}
+                      <input type="file" accept="image/*" onChange={(e) => handleUploadFile(e, 'logo')} className="hidden" />
+                    </label>
+                  </div>
                 </div>
 
-                <div className="mt-auto pt-6 text-[11px] text-slate-400">
-                  Powered by <strong className="text-white">Reyyztore</strong>
+                <div>
+                  <label className="block text-xs text-stone-400 mb-1">Judul Halaman</label>
+                  <input
+                    type="text"
+                    value={theme.header_title}
+                    onChange={(e) => setTheme({ ...theme, header_title: e.target.value })}
+                    className="w-full px-4 py-3 bg-black/35 border border-white/10 rounded-2xl text-sm text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs text-stone-400 mb-1">Sub-judul Sambutan</label>
+                  <textarea
+                    rows={2}
+                    value={theme.header_subtitle}
+                    onChange={(e) => setTheme({ ...theme, header_subtitle: e.target.value })}
+                    className="w-full px-4 py-3 bg-black/35 border border-white/10 rounded-2xl text-sm text-white"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-stone-400 mb-1">Warna Tombol / Aksen</label>
+                    <div className="flex items-center gap-2 bg-black/35 border border-white/10 p-2 rounded-2xl">
+                      <input type="color" value={theme.primary_color} onChange={(e) => setTheme({ ...theme, primary_color: e.target.value })} className="w-8 h-8 rounded-xl cursor-pointer bg-transparent border-0" />
+                      <span className="text-xs font-mono text-stone-300">{theme.primary_color}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-stone-400 mb-1">Warna Latar Belakang</label>
+                    <div className="flex items-center gap-2 bg-black/35 border border-white/10 p-2 rounded-2xl">
+                      <input type="color" value={theme.bg_color} onChange={(e) => setTheme({ ...theme, bg_color: e.target.value })} className="w-8 h-8 rounded-xl cursor-pointer bg-transparent border-0" />
+                      <span className="text-xs font-mono text-stone-300">{theme.bg_color}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3 pt-2 border-t border-white/10">
+                  <label className="block text-xs font-bold text-amber-300 uppercase tracking-wider">Bingkai Foto Kamera</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {PRESET_FRAMES.map((pf) => (
+                      <button
+                        key={pf.id}
+                        type="button"
+                        onClick={() => setTheme({ ...theme, active_frame_url: pf.url })}
+                        className={`p-3 rounded-2xl text-xs text-left border transition ${
+                          theme.active_frame_url === pf.url ? 'bg-amber-400/20 border-amber-400 text-white' : 'bg-black/35 border-white/10 text-stone-400'
+                        }`}
+                      >
+                        {pf.name}
+                      </button>
+                    ))}
+                  </div>
+                  <label className="flex items-center justify-center gap-2 px-4 py-3 border border-dashed border-white/20 hover:border-amber-400 rounded-2xl cursor-pointer text-xs text-stone-200">
+                    <ImageIcon className="w-4 h-4 text-amber-400" />
+                    Upload Bingkai Custom (PNG Transparan)
+                    <input type="file" accept="image/png" onChange={(e) => handleUploadFile(e, 'frame')} className="hidden" />
+                  </label>
+                </div>
+
+                <button
+                  onClick={saveThemeConfig}
+                  disabled={savingTheme}
+                  className="w-full py-3.5 bg-gradient-to-r from-amber-400 to-orange-400 text-stone-950 font-bold rounded-2xl text-sm shadow-lg transition"
+                >
+                  {savingTheme ? 'Menyimpan...' : 'Simpan & Terapkan ke Web Pelanggan'}
+                </button>
+              </div>
+
+              {/* Live Preview */}
+              <div className="glass-v7 rounded-3xl p-6">
+                <p className="text-xs text-stone-400 uppercase tracking-wider mb-3">Live Preview</p>
+                <div style={{ backgroundColor: theme.bg_color }} className="rounded-3xl p-6 border border-white/15 min-h-[440px] flex flex-col items-center text-center">
+                  {theme.logo_url && <img src={theme.logo_url} alt="Logo" className="w-16 h-16 rounded-2xl object-cover mb-3 shadow-lg" />}
+                  <h3 className="text-xl font-bold text-white">{theme.header_title}</h3>
+                  <p className="text-xs text-stone-300 mt-1 max-w-xs">{theme.header_subtitle}</p>
+                  <div className="w-full mt-6 p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 text-left space-y-3">
+                    <div className="h-28 rounded-xl bg-black/30 flex items-center justify-center text-xs text-stone-300">Kamera + Bingkai Aktif</div>
+                    <div className="h-9 rounded-xl bg-black/30 px-3 flex items-center text-xs text-stone-400">Nomor WhatsApp</div>
+                    <button type="button" style={{ backgroundColor: theme.primary_color }} className="w-full py-2.5 rounded-xl text-xs font-bold text-white">Kirim Ulasan</button>
+                  </div>
+                  <div className="mt-auto pt-6 text-[11px] text-stone-400">Powered by <strong className="text-white">Reyyztore</strong></div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
-      </main>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
