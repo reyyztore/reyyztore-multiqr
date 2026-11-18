@@ -1,23 +1,42 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { QrCode, Lock, User, ArrowRight, ShieldCheck } from 'lucide-react';
+import { QrCode, User, ArrowRight, Sparkles } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
   const [username, setUsername] = useState('');
-  const [pin, setPin] = useState('');
+  const [pinDigits, setPinDigits] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  const handlePinChange = (index: number, val: string) => {
+    const digit = val.replace(/\D/g, '').slice(-1);
+    const updated = [...pinDigits];
+    updated[index] = digit;
+    setPinDigits(updated);
+
+    if (digit && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !pinDigits[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    const pin = pinDigits.join('');
 
-    if (pin.length !== 6 || !/^\d{6}$/.test(pin)) {
-      setError('Kata sandi wajib 6 digit angka.');
+    if (pin.length !== 6) {
+      setError('Masukkan lengkap 6 digit angka PIN.');
       return;
     }
 
@@ -31,7 +50,7 @@ export default function LoginPage() {
         .single();
 
       if (dbError || !data) {
-        setError('Nama akun atau PIN 6 digit salah.');
+        setError('Nama akun atau PIN 6 digit tidak cocok.');
         setLoading(false);
         return;
       }
@@ -50,84 +69,90 @@ export default function LoginPage() {
         slug: data.slug,
       }));
 
-      if (data.role === 'admin') {
-        router.push('/admin');
-      } else {
-        router.push('/dashboard');
-      }
+      router.push(data.role === 'admin' ? '/admin' : '/dashboard');
     } catch {
-      setError('Terjadi kesalahan koneksi.');
+      setError('Gagal terhubung ke server.');
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-slate-950 via-indigo-950/40 to-slate-950">
-      <div className="w-full max-w-md bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-3xl p-8 shadow-2xl">
+    <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden bg-[#050811]">
+      {/* Ambient Glow Orbs */}
+      <div className="absolute -top-24 -left-24 w-80 h-80 bg-indigo-600/25 rounded-full blur-[110px] pointer-events-none" />
+      <div className="absolute -bottom-24 -right-24 w-80 h-80 bg-fuchsia-600/20 rounded-full blur-[110px] pointer-events-none" />
+
+      <div className="w-full max-w-md glass-panel rounded-[2rem] p-8 relative z-10 animate-fade-up">
         <div className="flex flex-col items-center text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center mb-4">
-            <QrCode className="w-7 h-7 text-indigo-400" />
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 p-[1px] shadow-lg shadow-indigo-500/30 mb-4 animate-float">
+            <div className="w-full h-full bg-slate-950/90 rounded-2xl flex items-center justify-center">
+              <QrCode className="w-8 h-8 text-indigo-400" />
+            </div>
           </div>
-          <h1 className="text-2xl font-bold text-white">Portal Multi-QR</h1>
-          <p className="text-sm text-slate-400 mt-1">Masuk menggunakan Nama Akun & PIN 6 Digit</p>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-400/20 text-[11px] font-medium text-indigo-300 mb-2">
+            <Sparkles className="w-3 h-3" /> Reyyztore Multi-QR System
+          </span>
+          <h1 className="text-2xl font-extrabold tracking-tight text-white">Selamat Datang</h1>
+          <p className="text-xs text-slate-400 mt-1">Masuk menggunakan Nama Akun & 6 Digit PIN</p>
         </div>
 
         {error && (
-          <div className="mb-5 p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm text-center">
+          <div className="mb-5 p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs text-center">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-5">
+        <form onSubmit={handleLogin} className="space-y-6">
           <div>
-            <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">
+            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-2">
               Nama Akun
             </label>
             <div className="relative">
-              <User className="w-5 h-5 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <User className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Contoh: tenderx"
-                className="w-full pl-11 pr-4 py-3 bg-slate-950/70 border border-slate-800 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500"
+                placeholder="Masukkan username..."
+                className="w-full pl-11 pr-4 py-3.5 bg-slate-950/80 border border-white/10 rounded-2xl text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">
+            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-2.5">
               Kata Sandi (6 Digit Angka)
             </label>
-            <div className="relative">
-              <Lock className="w-5 h-5 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="password"
-                inputMode="numeric"
-                maxLength={6}
-                required
-                value={pin}
-                onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-                placeholder="••••••"
-                className="w-full pl-11 pr-4 py-3 bg-slate-950/70 border border-slate-800 rounded-xl text-white tracking-[0.5em] font-mono text-lg placeholder-slate-600 focus:outline-none focus:border-indigo-500"
-              />
+            <div className="grid grid-cols-6 gap-2">
+              {pinDigits.map((digit, idx) => (
+                <input
+                  key={idx}
+                  ref={(el) => { inputRefs.current[idx] = el; }}
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => handlePinChange(idx, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(idx, e)}
+                  className="w-full aspect-square text-center text-lg font-bold font-mono bg-slate-950/90 border border-white/10 rounded-xl text-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition"
+                />
+              ))}
             </div>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 px-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold rounded-xl flex items-center justify-center gap-2 transition shadow-lg shadow-indigo-600/25"
+            className="w-full py-4 px-5 bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-600 hover:brightness-110 disabled:opacity-50 text-white font-bold text-sm rounded-2xl flex items-center justify-center gap-2 transition shadow-xl shadow-indigo-600/25"
           >
-            {loading ? 'Memeriksa...' : 'Masuk ke Dashboard'}
+            {loading ? 'Memverifikasi Akses...' : 'Masuk Dashboard'}
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
 
-        <div className="mt-8 pt-5 border-t border-slate-800/80 flex items-center justify-center gap-2 text-xs text-slate-500">
-          <ShieldCheck className="w-4 h-4 text-indigo-400" />
-          <span>Powered by <strong className="text-slate-300">Reyyztore</strong></span>
+        <div className="mt-8 pt-4 border-t border-white/5 text-center text-[11px] text-slate-500">
+          Powered by <span className="text-slate-300 font-semibold">Reyyztore</span>
         </div>
       </div>
     </div>
